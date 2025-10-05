@@ -6,6 +6,163 @@
     <title>Hotel KPI Dashboard | Bezla.com </title>
 </head>
 <body>
-    
+    <main class="container">
+        <header class="header">
+            <div>
+                <div class="title">Hotel KPI Calculator</div>
+                <div class="subtitle">Enter hotel metrics to compute Occupancy, ADR, and RevPAR in real time</div>
+            </div>
+            <div class="subtitle">Vanilla HTML | CSS | JavaScript</div>
+        </header>
+        <section class="grid" aria-label="Dashboard">
+            <!--User inputs here-->
+            <div class="card" aria-labelledby="inputs-heading">
+                <h2 id="inputs-heading">Core Inputs</h2>
+                <!--Total Room available-->
+                <div class="field">
+                    <label for="totalRooms">Total Rooms Available</label>
+                    <input id="totalRooms" class="input" type="number" min="0" step="1" placeholder="example: 120" inputmode="numeric"/>
+                </div>
+                <!--Rooms sold-->
+                <div class="field">
+                    <label for="roomsSold">Rooms Sold</label>
+                    <input id="roomsSold" class="input" type="number" min="0" step="1" placeholder="example: 85" inputmode="numeric"/>
+                </div>
+                <!--Total Room Revenue-->
+                <div class="field">
+                    <label for="roomRevenue">Total Room Revenue ($)</label>
+                    <input id="roomRevenue" class="input" type="number" min="0" step="0.1" placeholder="example: 12500.50" inputmode="decimal"/>
+                </div>
+                <p class="hint">Tip: Negative values are not allowed. Division-by-zero is handled gracefully (displaying <strong>N/A</strong> or <strong>$0.00</strong> as appropriate).</p>
+
+                </div>
+            </div>
+            <!--Outputs here-->
+            <div class="card" aria-labelledby="outputs-heading">
+                <h2 id="outputs-heading">KPIs</h2>
+                <div class="kpis">
+                    <div class="kpi ok" aria-live="polite">
+                        <div class="label">Occupancy</div>
+                        <div id="Occupancy" class="value">0.00%</div>
+                    </div>
+                    <div class="kpi info" aria-live="polite">
+                        <div class="label">Average Daily Rate (ADR)</div>
+                        <div id="adr" class="value">$0.00</div>
+                    </div>                    
+                    <div class="kpi info" aria-live="polite">
+                        <div class="label">Revenue per Available Room (RevPAR)</div>
+                        <div id="revpar" class="value">$0.00</div>
+                    </div>
+                </div>
+
+
+                <p class="footer" id="status" aria-live="polite"></p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+            //utility functions here:
+
+            //formatter object fordisplaying numbers as U.S currency:
+            const currencyFmt = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+
+            //check whether the number is valid (not NaN, Infinite) and format the number into percentage up to 2 decimal places
+            function percentFmt(num){
+                if(!Number.isFinite(num)) return 'N/A';
+                return `${num.toFixed(2)}%`;
+            }
+
+            //Grabbing the elements here:
+            const elTotal = document.getElementById('totalRooms');
+            const elSold = document.getElementById('roomsSold');
+            const elRevenue = document.getElementById('roomRevenue');
+            const elOcc = document.getElementById('Occupancy');
+            const elAdr = document.getElementById('adr');
+            const elRevpar = document.getElementById('revpar');
+            const elStatus = document.getElementById('status');
+
+
+
+            //Guard: coerce to non-negative numbers (Nan -> 0);
+            function parseNonNeg(v){
+                const n = Number(v);
+                if(!Number.isFinite(n) || n < 0) return 0;
+                return n;
+            }
+
+            function compute(){
+                const total = parseNonNeg(elTotal.value);
+                const sold = parseNonNeg(elSold.value);
+                const revenue = parseNonNeg(elRevenue.value);
+
+                //validation hints
+                const hints = [];
+                if (sold > total && total > 0) hints.push(`Rooms Sold (${sold}) exceeds Total Rooms (${total}).`);
+
+                //Occupancy (%) = (Rooms Sold / Total Rooms Available) * 100
+                let occDisplay = 'N/A';
+                if (total === 0){
+                    occDisplay = 'N/A';
+                }else {
+                    const occ = (sold / total ) * 100;
+                    occDisplay = percentFmt(occ);
+                }
+
+
+                // ADR ($) = Total Room Revenue / Rooms Sold
+                let adrDisplay = currencyFmt.format(0);
+                if(sold == 0){
+                    adrDisplay = currencyFmt.format(0);
+                } else {
+                    adrDisplay = currencyFmt.format(revenue / sold);
+                }
+
+                //RevPar ($) = Total Room Revenue / Total Rooms Available
+                let revparDisplay = currencyFmt.format(0);
+                if(total === 0){
+                    revparDisplay = currencyFmt.format(0) // handling division by 0 here
+                }else{
+                    revparDisplay = currencyFmt.format(revenue / total);
+                }
+
+
+                elOcc.textContent = occDisplay;
+                elAdr.textContent = adrDisplay;
+                elRevpar.textContent = revparDisplay;
+
+
+                // Status line (edge cases)
+                if (total === 0 && (sold > 0 || revenue > 0)) {
+                    elStatus.innerHTML = `<span class="err">Note:</span> Total Rooms is 0, so Occupancy and RevPAR are shown as N/A / $0.00.`;
+                } else if (sold === 0 && revenue > 0) {
+                    elStatus.innerHTML = `<span class="err">Note:</span> Rooms Sold is 0, so ADR is shown as $0.00.`;
+                } else if (hints.length) {
+                    elStatus.textContent = hints.join(' ');
+                } else {
+                    elStatus.textContent = '';
+                }
+
+
+
+
+
+
+            }
+
+
+            //live updates
+            for(const el of [elTotal, elSold, elRevenue]){
+                el.addEventListener('input', compute);
+                el.addEventListener('change', compute);
+            }
+
+            //Initializing default values
+            elTotal.value = 120;
+            elSold.value = 85;
+            elRevenue.value = 12500.50;
+            compute();
+
+    </script>
 </body>
 </html>
